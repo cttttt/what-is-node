@@ -627,9 +627,10 @@ console.log('Hello, %s', name);
 
 - All node programs are actually packages
 
-- But you're allowed to leave out the package.json unless you really need it
+- Although you're allowed to omit `package.json` for simple programs, no
+  package is complete without one.
 
-- Let's add one:
+- Let's add one for now:
 
 ```
 {
@@ -640,6 +641,15 @@ console.log('Hello, %s', name);
 }
 ``` 
 
+- That's it.  It's not terribly useful right now, but will be.  I promise.
+
+- Another handy way to create one is to run the command:
+
+```
+npm init
+```
+
+...and answer the questions even if it means hitting ENTER at all prompts.
 
 
 
@@ -657,6 +667,472 @@ console.log('Hello, %s', name);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+11.http {{{
+
+- You may have heard of something called the internet
+
+- A pretty popular protocol applications use on the internet is HTTP
+
+- Node just happens to be great for implementing HTTP servers
+
+- A handy one is sitting in the `http` module
+
+- Here's the simplest one you'll ever see:
+
+```
+var http = require('http');
+
+var server = http.createServer(function (req, res) {
+    res.writeHead(200, { 'content-type': 'text/plain' });
+    res.end('Hello World\n');
+});
+
+server.listen(30303);
+```
+
+> Chris: Explain this
+
+- Let's turn that simple program into an http server that responds with the
+  configured name
+
+> Checkout the `http` branch
+
+> Chris: Explain this
+
+  - `http` is a built-in module: Has all of the machinery for a fully
+    functioning http server
+
+  - `http.createServer()` creates a new server
+
+  - Once the server is asked to `.listen()`, any connections that come in will
+    result in a call to the function we provided with details on the incoming
+    request, as well as a handle through which we can respond
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+12.incoming-requests {{{
+
+- Here's an example of a raw HTTP request:
+
+```
+$ telnet localhost 30303
+GET / HTTP/1.1
+host: localhost:30303
+user-agent: curl/7.49.1
+accept: text/plain
+
+HTTP/1.1 200 OK
+content-type: text/plain
+...
+...
+Hello, Chris
+
+$ curl -v localhost:30303
+...
+...
+Hello, Chris
+```
+
+- That `req` argument to our callback will have fields for each piece of
+  information from the request.
+
+- This includes:
+
+    - req.method: GET
+
+    - req.url: /
+
+    - req.httpVersion: 1.1
+
+    - req.headers: { 
+	host: 'localhost:30303',
+	'user-agent': 'curl/7.49.1',
+	'accept': 'text/plain' 
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+13.simple-api {{{
+
+- One use for an HTTP server is to provide an accessible API
+
+- Let's make the simplest API encapsulating a name:
+
+-- GET /api/name - Retrieves the saved name, or the default, Chris
+-- POST /api/name?name=NAME - Stores a new name
+-- DELETE /api/name - Removes any names saved using the HTTP API
+
+-- GET / - Retrieves a friendly message based on the saved name
+
+> Chris: Checkout the `simple-api` branch
+
+> Chris: Explain and demo it
+
+- There are a few...issues in this code.  Over the next few sections, we'll try
+  to set it straight.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+14.blocking-is-evil {{{
+
+- Remember when we read the name out of the file in `derive-name.js`?
+
+- This is actually evil
+
+- Remember operating systems class?
+
+    - In UNIX, by default, if a process performs a read from disk, it's
+      actually asking the kernel to fill a buffer with data from the file on
+      disk
+
+    - Until the buffer is filled, THE PROCESS IS GIVEN NO TIME ON THE CPU
+
+    - An alternative is to give the kernel a buffer and ask it do the work in
+      the background, and to use various methods to determine when the work is
+      done.
+
+- Node makes it easy to do I/O in this second way:
+
+```
+var fs = require('fs');
+
+fs.readFile('name.txt', function (err, data) {
+  console.log('The file contained %s', data);
+});
+```
+
+> Chris: Checkout on the branch, `blocking-is-evil`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+15.this-servers-complicated {{{
+
+- This is all there is to making API servers in Node
+
+- From here on in, it's up to us to find better ways to organize code
+
+- A noble goal (when it comes to organization) is to separate concerns within our application:
+
+  - Configuration
+
+  - Routing
+
+  - Controller code
+ 
+  - Model
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+16.connect {{{
+
+- There are a tonne of modules that help with this, but a pretty handy one
+  is `connect`.
+
+- With `connect`, routing is handled using a Chain of Responsibility.
+
+- The links in the chain are called `middleware`.
+
+> Chris: Checkout the `connect`, remove `node_modules` and run it.
+
+- Uh-oh.  'connect' isn't found dude.
+
+- Aside: npm
+
+  - Node's package manager.
+
+  - Remember the funky search logic for require?
+
+  - npm downloads packages and puts them into `node_modules/`
+
+  - It detects dependencies by looking into the `dependencies` field of
+    `package.json`
+
+  - A package requires other packages?  They're put into just the right
+    place in `node_modules/`
+
+- To install `connect`, simply run:
+
+```
+npm install --save connect
+```
+
+> Chris: Give it a shot
+
+- As far as code cleanup is concerned, this has helped get rid of one of
+  the monster switch statements
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}}}
+17.express {{{
+
+- Yet another handy module is called `express`
+
+- It builds on `connect`
+
+  - Adds advanced routing
+
+  - Allows sub-applications
+
+  - Provides several convenience methods and fields to `req` and `res`
+
+- But more on that next time!
 
 
 
@@ -721,9 +1197,6 @@ console.log('Hello, %s', name);
 
 
 
-
-
-}}}
 
 
 
