@@ -1,4 +1,24 @@
-function deriveName() {
+function deriveName(callback) {
+    var fs = require('fs');
+
+    var name = process.argv[2] || process.env.NAME;
+
+    if (name) {
+        callback(null, name);
+        return;
+    }
+
+    fs.readFile('name.txt', function (err, data) {
+        if (err) {
+            callback(err);
+            return;
+        }
+
+        callback(null, data.toString().trim());
+    })
+}
+
+function deriveNameSync() {
     var fs = require('fs');
 
     var name = process.argv[2] || process.env.NAME;
@@ -12,4 +32,5 @@ function deriveName() {
     return name;
 }
 
-module.exports = deriveName;
+module.exports.deriveName = deriveName;
+module.exports.deriveNameSync = deriveNameSync;

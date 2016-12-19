@@ -12,8 +12,16 @@ var server = http.createServer(function (req, res) {
         case '/api/name':
             switch (req.method) {
                 case 'GET': 
-                    res.writeHead(200, { 'content-type': 'text/plain' });
-                    res.end(deriveName());
+                    deriveName.deriveName(function (err, name) {
+                        if (err) {
+                            res.writeHead(500, { 'content-type': 'text/plain' });
+                            res.end('Internal Error');
+                            return;
+                        }
+
+                        res.writeHead(200, { 'content-type': 'text/plain' });
+                        res.end(util.format("%s\n", name));
+                    });
                     return;
                 case 'POST':
                     if (reqUrl.query && reqUrl.query.name) {
@@ -40,9 +48,21 @@ var server = http.createServer(function (req, res) {
         case '/':
             switch (req.method) {
                 case 'GET':
-                    res.writeHead(200, { 'content-type': 'text/plain' });
-                    var message = util.format('Hello, %s\n', lastNameFromHttp || deriveName());
-                    res.end(message);
+                    deriveName.deriveName(function (err, name) {
+                        if (err) {
+                            res.writeHead(500, { 'content-type': 'text/plain' });
+                            res.end('Internal Error');
+                            return;
+                        }
+
+                        var message = util.format(
+                            'Hello, %s\n',
+                            lastNameFromHttp || name
+                        );
+
+                        res.writeHead(200, { 'content-type': 'text/plain' });
+                        res.end(message);
+                    });
                     return;
                 default:
                     res.writeHead(400, { 'content-type': 'text/plain' });
