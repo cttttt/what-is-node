@@ -1,11 +1,67 @@
 var deriveName = require('./derive-name'),
     http = require('http'),
-    util = require('util');
+    util = require('util'),
+    url = require('url');
+
+var lastNameFromHttp;
 
 var server = http.createServer(function (req, res) {
-    res.writeHead(200, { 'content-type': 'text/plain' });
-    var message = util.format('Hello, %s\n', deriveName());
-    res.end(message);
+    var reqUrl = url.parse(req.url, true);
+    
+    switch(reqUrl.pathname) {
+        case '/api/name':
+            switch (req.method) {
+                case 'GET': 
+                    res.writeHead(200, { 'content-type': 'text/plain' });
+                    res.end(deriveName());
+                    return;
+                case 'POST':
+                    if (reqUrl.query && reqUrl.query.name) {
+                        lastNameFromHttp = reqUrl.query.name;
+                        res.writeHead(201, { 'content-type': 'text/plain' });
+                        res.end('Accepted\n');
+                    } else {
+                        res.writeHead(400, { 'content-type': 'text/plain' });
+                        res.end('Bad Request: Missing Query Parameter: name\n');
+                        return;
+                    }
+
+                    break;
+                case 'DELETE':
+                    lastNameFromHttp = null;
+                    res.writeHead(201, { 'content-type': 'text/plain' });
+                    res.end('Accepted\n');
+                    break;
+                default:
+                    res.writeHead(400, { 'content-type': 'text/plain' });
+                    res.end('Bad Request\n');
+                    return;
+            }
+        case '/':
+            switch (req.method) {
+                case 'GET':
+                    res.writeHead(200, { 'content-type': 'text/plain' });
+                    var message = util.format('Hello, %s\n', lastNameFromHttp || deriveName());
+                    res.end(message);
+                    return;
+                default:
+                    res.writeHead(400, { 'content-type': 'text/plain' });
+                    res.end('Bad Request\n');
+                    return;
+            }
+            break;
+        default:
+            switch (req.method) {
+                case 'GET':
+                    res.writeHead(404, { 'content-type': 'text/plain' });
+                    res.end('Not found\n');
+                    return;
+                default:
+                    res.writeHead(400, { 'content-type': 'text/plain' });
+                    res.end('Bad Request\n');
+                    return;
+            }
+    }
 });
 
 server.listen(process.env.PORT || 30303);
